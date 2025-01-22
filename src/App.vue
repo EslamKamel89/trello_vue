@@ -1,16 +1,37 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
-import Draggable from 'vuedraggable'
-type Card = {
-  id: number
-  title: string
-  description: string
-}
-type List = {
-  id: number
-  title: string
-  cards: Card[]
-}
+import { computed, reactive, ref } from 'vue';
+import Draggable from 'vuedraggable';
+import ModalDialog from './components/ModalDialog.vue';
+import type { Card, List } from './types/types';
+
+const isModalOpen = ref<boolean>(false);
+const editingCard = ref<Card | null>(null);
+const editingListIndex = ref<number | null>(null);
+const modalMode = computed<'add' | 'edit'>(() => (editingCard.value === null ? 'add' : 'edit'));
+const openModal = (listIndex: number, card?: Card) => {
+  editingListIndex.value = listIndex;
+  editingCard.value = card ?? null;
+  isModalOpen.value = true;
+};
+const closeModal = () => {
+  isModalOpen.value = false;
+  editingListIndex.value = null;
+  editingCard.value = null;
+};
+const saveCard = (card: Card) => {
+  if (editingListIndex.value == null) return;
+  if (modalMode.value === 'add') {
+    const newId: number =
+      Math.max(...lists.flatMap((list) => list.cards.map((card) => card.id))) + 1;
+    lists[editingListIndex.value].cards.push({ ...card, id: newId });
+  } else {
+    const cardIndex = lists[editingListIndex.value].cards.findIndex((c: Card) => c.id === card.id);
+    if (cardIndex !== -1) {
+      lists[editingListIndex.value].cards[cardIndex] = card;
+    }
+  }
+  closeModal();
+};
 const lists = reactive<List[]>([
   {
     id: 1,
@@ -33,7 +54,7 @@ const lists = reactive<List[]>([
     title: 'Done',
     cards: [{ id: 5, title: 'Task 5', description: 'Description for Task 5' }],
   },
-])
+]);
 </script>
 
 <template>
@@ -55,12 +76,14 @@ const lists = reactive<List[]>([
         </Draggable>
 
         <button
+          @click="openModal(list.id)"
           class="w-full bg-transparent hover:bg-white text-gray-500 p-2 text-left mt-2 text-sm font-medium rounded"
         >
           +Add Card
         </button>
       </div>
     </div>
+    <ModalDialog :is-open="isModalOpen" @close="closeModal"></ModalDialog>
   </main>
 </template>
 
